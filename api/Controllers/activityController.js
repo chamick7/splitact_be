@@ -20,7 +20,7 @@ const verifyMember = (acID, atID) => {
 //atName,atCreaterID,member
 exports.post_createActivity = (req, res, next) => {
   const activity = Activity({
-    _id: mongoose.Types.ObjectId,
+    _id: mongoose.Types.ObjectId(),
     atName: req.body.atName.trim(),
     atCreaterID: req.accountData.acID,
   });
@@ -31,9 +31,10 @@ exports.post_createActivity = (req, res, next) => {
       let allMember = [];
 
       req.body.members.map((member) => {
+
         allMember.push({
           atID: result._id,
-          acID: member.acID,
+          acID: member,
         });
       });
 
@@ -44,6 +45,7 @@ exports.post_createActivity = (req, res, next) => {
           });
         })
         .catch((err) => {
+
           return res.status(500).json({
             status: "Error",
             code: "AT0002",
