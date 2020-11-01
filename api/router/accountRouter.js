@@ -7,6 +7,7 @@ router.post('/',accountController.post_register);
 router.post('/login',accountController.post_login);
 router.get('/auth',accountController.get_auth);
 router.get('/logout',accountController.get_logout);
+router.post('/forgotpw',accountController.post_forgetPW_sendToken);
 
 
 

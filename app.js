@@ -57,6 +57,11 @@ app.get('/',(req,res,next) => {
 app.use("/account", accountRouter);
 app.use("/activity",activityRouter);
 
+app.use('/test',(req,res,next) => {
+  
+  res.status(200).end()
+})
+
 
 app.use((req, res, next) => {
   const error = new Error("Not found");

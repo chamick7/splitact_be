@@ -3,10 +3,12 @@ const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const moment = require("../../utils/moment");
+const mailer = require("../../utils/mailer");
 
 //email,password,name
 exports.post_register = (req, res, next) => {
-    console.log(req.body);
+  console.log(req.body);
   Account.find({ email: req.body.email.trim() })
     .exec()
     .then((accountRes) => {
@@ -19,6 +21,7 @@ exports.post_register = (req, res, next) => {
         bcrypt
           .hash(req.body.password, 10)
           .then((hash) => {
+            console.log(moment.dateThai());
             const account = Account({
               _id: mongoose.Types.ObjectId(),
               email: req.body.email.trim(),
@@ -34,7 +37,7 @@ exports.post_register = (req, res, next) => {
                 });
               })
               .catch((err) => {
-                  console.log(err);
+                console.log(err);
                 res.status(500).json({
                   status: "Error",
                   code: "AC0003",
@@ -68,10 +71,10 @@ exports.post_login = (req, res, next) => {
     .then((accountRes) => {
       if (accountRes.length >= 1) {
         bcrypt.compare(
-            req.body.password,
-            accountRes[0].password,
-            (err, result) => {
-              if (result) {
+          req.body.password,
+          accountRes[0].password,
+          (err, result) => {
+            if (result) {
               jwt.sign(
                 getAccountData(accountRes[0]),
                 process.env.JWT_SECRET,
@@ -80,67 +83,147 @@ exports.post_login = (req, res, next) => {
                 },
                 (err, token) => {
                   req.session.user = getAccountData(accountRes[0]);
-                  req.session.cookie.maxAge = 3 * 60 * 60 * 1000;
+                  req.session.cookie.maxAge = 24 * 60 * 60 * 1000;
 
                   res.cookie("token", token, {
-                    maxAge: 3 * 60 * 60 * 1000,
+                    maxAge: 24 * 60 * 60 * 1000,
                     httpOnly: true,
                   });
 
-                  return res.status(200).json({
-                      status:"Success",
-                      account: getAccountData(accountRes[0])
-                  }).end()
+                  return res
+                    .status(200)
+                    .json({
+                      status: "Success",
+                      account: getAccountData(accountRes[0]),
+                    })
+                    .end();
                 }
               );
             } else {
-                return res.status(401).json({
-                    status: "Error",
-                    code: "AC0011"
-                })
+              return res.status(401).json({
+                status: "Error",
+                code: "AC0011",
+              });
             }
           }
         );
       } else {
-          return res.status(401).json({
-              status: "Error",
-              code: "AC0012"
-          })
+        return res.status(401).json({
+          status: "Error",
+          code: "AC0012",
+        });
       }
     })
     .catch((err) => {
-        return res.status(500).json({
-            status: "Error",
-              code: "AC0013"
-        })
+      return res.status(500).json({
+        status: "Error",
+        code: "AC0013",
+      });
     });
 };
 
+exports.get_auth = (req, res, next) => {
+  if (req.session.user) {
+    return res.status(200).json({
+      status: "Success",
+      account: req.session.user,
+    });
+  } else {
+    return res.status(401).json({
+      status: "Error",
+      code: "AC0021",
+    });
+  }
+};
 
-exports.get_auth = (req,res,next) => {
-    if(req.session.user){
-        return res.status(200).json({
+exports.get_logout = (req, res, next) => {
+  if (req.session) {
+    req.session.destroy();
+    res.clearCookie();
+    return res
+      .status(200)
+      .json({
+        status: "Success",
+        message: "logouted",
+      })
+      .end();
+  }
+};
+
+//email
+exports.post_forgetPW_sendToken = (req, res, next) => {
+  Account.find({ email: req.body.email.trim() })
+    .then((accountRes) => {
+      if (accountRes.length >= 1) {
+        jwt.sign(
+          { header: "Reset pw", email: accountRes[0].email },
+          process.env.JWT_SECRET,
+          { expiresIn: "10m" },
+          (err, token) => {
+
+            // console.log(mailer.sendMail(accountRes[0].email, token ));
+            mailer.sendMail(accountRes[0].email, token )
+
+            // return res.status(200).json({
+            //   status: "Success",
+            //   rsToken: token,
+            // });
+          }
+        );
+      } else {
+        return res.status(404).json({
+          status: "Error",
+          code: "AC0012",
+        });
+      }
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        status: "Error",
+        code: "AC0013",
+      });
+    });
+};
+
+//rwToken
+exports.get_forgetPW_recieveToken = (req, res, next) => {
+  try {
+    const decode = jwt.verify(req.query.rsToken, process.env.JWT_SECRET);
+
+    res.status(200).json({
+      status: "Success",
+    });
+  } catch (error) {
+    res.status(406).json({
+      status: "Error",
+      code: "AC0041",
+    });
+  }
+};
+
+//rwToken, password
+exports.post_forgetPW_resetPassword = (req, res, next) => {
+  try {
+    const decode = jwt.verify(req.body.rsToken, process.env.JWT_SECRET);
+
+    bcrypt.hash(req.body.password, 10).then((hash) => {
+      Account.findOneAndUpdate({ email: decode.email }, { password: hash })
+        .then(() => {
+          return res.status(200).json({
             status: "Success",
-            account: req.session.user
+          });
         })
-    } else {
-        return res.status(401).json({
+        .catch((err) => {
+          return res.status(500).json({
             status: "Error",
-            code: "AC0021"
-        })
-    }
-}
-
-
-exports.get_logout = (req,res,next) => {
-    if(req.session){
-        req.session.destroy();
-        res.clearCookie();
-        return res.status(200).json({
-            status: "Success",
-            message: "logouted"
-        }).end();
-    }
-
-
-}
+            code: "AC0051"
+          })
+        });
+    });
+  } catch (error) {
+    res.status(406).json({
+      status: "Error",
+      code: "AC0041",
+    });
+  }
+};
