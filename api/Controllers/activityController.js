@@ -63,50 +63,37 @@ exports.post_createActivity = (req, res, next) => {
 };
 
 exports.get_activity = (req, res, next) => {
-  if (verifyMember(req.accountData.acID, req.query.activity)) {
-    Activity.find({ _id: req.query.activity })
-      .exec()
-      .then((activity) => {
-        const resActivity = {
-          atID: activity[0]._id,
-          atName: activity[0].acName,
-        };
+  // console.log(req.query.activity);
 
-        ActivityMember.find({ atID: activity[0]._id })
-          .exec()
-          .then((activityMember) => {
-            return res.status(200).json({
-              status: "Success",
-              activity: resActivity,
-              member: activityMember,
-            });
-          })
-          .catch((err) => {
-            return res.status(404).json({
-              status: "Error",
-              code: "AT0012",
-            });
-          });
-      })
-      .catch((err) => {
-        return res.status(404).json({
-          status: "Error",
-          code: "AT0013",
-        });
+  Account.findOne({ _id: req.accountData.acID })
+    .select("activities -_id")
+    .populate("activities.atID")
+    .then((dataRes) => {
+      const result = dataRes.activities.some(element => element.atID._id == req.query.activity);
+      console.log(result);
+
+      // if(result){
+
+      // }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).status({
+        status: "Error",
       });
-  } else {
-    return res.status(401).json({
-      status: "Error",
-      code: "AT0011",
     });
-  }
+
+  res.status(200).json({
+    status: "Success",
+  });
 };
 
 exports.get_amountActivity = (req, res, next) => {
   Account.findOne({ _id: req.accountData.acID })
-  .select("-activities.joinDate -activities._id")
+    .select("-activities.joinDate -activities._id")
     .populate("activities.atID -__v")
     .then((doc) => {
+      req.session.activities = doc.activities;
       return res.status(200).json({
         status: "Success",
         activities: doc.activities,

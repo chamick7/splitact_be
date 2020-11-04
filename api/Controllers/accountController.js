@@ -79,14 +79,14 @@ exports.post_login = (req, res, next) => {
                 getAccountData(accountRes[0]),
                 process.env.JWT_SECRET,
                 {
-                  expiresIn: "3h",
+                  expiresIn: "12h",
                 },
                 (err, token) => {
                   req.session.user = getAccountData(accountRes[0]);
-                  req.session.cookie.maxAge = 24 * 60 * 60 * 1000;
+                  req.session.cookie.maxAge = 12 * 60 * 60 * 1000;
 
                   res.cookie("token", token, {
-                    maxAge: 24 * 60 * 60 * 1000,
+                    maxAge: 12 * 60 * 60 * 1000,
                     httpOnly: true,
                   });
 
@@ -150,6 +150,29 @@ exports.get_logout = (req, res, next) => {
   }
 };
 
+exports.get_users = (req, res, next) => {
+  Account.find({ _id: { $ne: req.accountData.acID } }).select("_id name").then(data => {
+    console.log(data);
+    if(data.length >= 1){
+      res.status(200).json({
+        status: "Success",
+        users: data
+      })
+    } else {
+      res.status(404).json({
+        status: "Error",
+        code: "AC0062"
+      })
+    }
+
+  }).catch(err => {
+    res.status(500).json({
+      status: "Error",
+      code: "AC0061"
+    })
+  })
+};
+
 //email
 exports.post_forgetPW_sendToken = (req, res, next) => {
   Account.find({ email: req.body.email.trim() })
@@ -160,9 +183,8 @@ exports.post_forgetPW_sendToken = (req, res, next) => {
           process.env.JWT_SECRET,
           { expiresIn: "10m" },
           (err, token) => {
-
             // console.log(mailer.sendMail(accountRes[0].email, token ));
-            mailer.sendMail(accountRes[0].email, token )
+            mailer.sendMail(accountRes[0].email, token);
 
             // return res.status(200).json({
             //   status: "Success",
@@ -216,8 +238,8 @@ exports.post_forgetPW_resetPassword = (req, res, next) => {
         .catch((err) => {
           return res.status(500).json({
             status: "Error",
-            code: "AC0051"
-          })
+            code: "AC0051",
+          });
         });
     });
   } catch (error) {

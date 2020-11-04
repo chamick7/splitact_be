@@ -5,6 +5,9 @@ module.exports = (req, res, next) => {
     const decode = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
     req.accountData = decode;
 
+
+    // console.log(decode);
+
     next();
   } catch (error) {
       res.status(401).json({
