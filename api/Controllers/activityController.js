@@ -69,7 +69,9 @@ exports.get_activity = (req, res, next) => {
     .select("activities -_id")
     .populate("activities.atID")
     .then((dataRes) => {
-      const result = dataRes.activities.some(element => element.atID._id == req.query.activity);
+      const result = dataRes.activities.some(
+        (element) => element.atID._id == req.query.activity
+      );
       console.log(result);
 
       // if(result){
@@ -106,3 +108,4 @@ exports.get_amountActivity = (req, res, next) => {
       });
     });
 };
+
