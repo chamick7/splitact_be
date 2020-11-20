@@ -6,17 +6,11 @@ const dateThai = moment.dateThai();
 
 const accountSchema = mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId,
-  name: { type: String, required: true },
+  username: { type: String, required: true },
   email: { type: String, required: true },
   password: { type: String, required: true },
-  activities: [
-    {
-      atID: { type: mongoose.Schema.Types.ObjectId, ref:'Activity' },
-      joinDate: { type: Date, default: dateThai }
-    }
-  ],
   role: { type: String, default: "member" },
-  reg_date: { type: Date, default: dateThai },
+  reg_date: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model("Account", accountSchema);

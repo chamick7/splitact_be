@@ -9,14 +9,24 @@ const mailer = require("../../utils/mailer");
 //email,password,name
 exports.post_register = (req, res, next) => {
   console.log(req.body);
-  Account.find({ email: req.body.email.trim() })
+  Account.find({ $or: [{username: req.body.username.trim()},{email: req.body.email.trim()}] })
     .exec()
     .then((accountRes) => {
       if (accountRes.length >= 1) {
-        res.status(409).json({
-          status: "Error",
-          Code: "AC0001",
-        });
+        if(accountRes[0].username === req.body.username.trim()){
+          res.status(409).json({
+            status: "Error",
+            Code: "AC0001",
+            already: "username"
+          });
+        } else if(accountRes[0].email === req.body.email.trim()) {
+          res.status(409).json({
+            status: "Error",
+            Code: "AC0001",
+            already: "email"
+          });
+        }
+        
       } else {
         bcrypt
           .hash(req.body.password, 10)
@@ -25,7 +35,7 @@ exports.post_register = (req, res, next) => {
             const account = Account({
               _id: mongoose.Types.ObjectId(),
               email: req.body.email.trim(),
-              name: req.body.name.trim(),
+              username: req.body.username.trim(),
               password: hash,
             });
 
@@ -61,12 +71,12 @@ exports.post_login = (req, res, next) => {
     return {
       acID: account._id,
       email: account.email,
-      name: account.name,
+      username: account.username,
       role: account.role,
     };
   };
 
-  Account.find({ email: req.body.email.trim() })
+  Account.find({ $or: [{email: req.body.emailOrUsername.trim()},{username: req.body.emailOrUsername.trim()}] })
     .exec()
     .then((accountRes) => {
       if (accountRes.length >= 1) {
@@ -140,18 +150,12 @@ exports.get_logout = (req, res, next) => {
   if (req.session) {
     req.session.destroy();
     res.clearCookie();
-    return res
-      .status(200)
-      .json({
-        status: "Success",
-        message: "logouted",
-      })
-      .end();
+    res.redirect('/');
   }
 };
 
 exports.get_users = (req, res, next) => {
-  Account.find({ _id: { $ne: req.accountData.acID } }).select("_id name").then(data => {
+  Account.find({ _id: { $ne: req.accountData.acID } }).select("_id username").then(data => {
     console.log(data);
     if(data.length >= 1){
       res.status(200).json({
@@ -184,7 +188,10 @@ exports.post_forgetPW_sendToken = (req, res, next) => {
           { expiresIn: "10m" },
           (err, token) => {
             // console.log(mailer.sendMail(accountRes[0].email, token ));
-            mailer.sendMail(accountRes[0].email, token);
+            mailer.sendMail(accountRes[0].email,accountRes[0].username, token);
+            return res.status(200).json({
+              status: "Success"
+            })
 
             // return res.status(200).json({
             //   status: "Success",
@@ -210,10 +217,11 @@ exports.post_forgetPW_sendToken = (req, res, next) => {
 //rwToken
 exports.get_forgetPW_recieveToken = (req, res, next) => {
   try {
-    const decode = jwt.verify(req.query.rsToken, process.env.JWT_SECRET);
+    const decode = jwt.verify(req.query.rstoken, process.env.JWT_SECRET);
 
     res.status(200).json({
       status: "Success",
+      email: decode.email
     });
   } catch (error) {
     res.status(406).json({

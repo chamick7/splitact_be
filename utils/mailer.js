@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 
-module.exports.sendMail = (email, rsToken) => {
+module.exports.sendMail = (email,name, rsToken) => {
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
@@ -13,9 +13,10 @@ module.exports.sendMail = (email, rsToken) => {
 
   const ejs = require("ejs");
 
+
   ejs.renderFile(
-    __dirname + "/resetpassword.ejs",
-    { email: email, rsToken: rsToken },
+    __dirname + "/resetpassword/resetpassword.ejs",
+    { email: email, name: name ,rsToken: rsToken },
     (err, res) => {
       if (err) {
         console.log(err);
