@@ -9,6 +9,7 @@ const tokenGet = require("../Middlewares/tokenGet");
 
 router.post("/", tokenAuth, activityController.post_createActivity);
 router.get("/", tokenAuth, activityController.get_activity);
+router.post("/leave",tokenAuth, activityController.post_leaveActivity);
 router.get("/amount", tokenAuth, activityController.get_amountActivity);
 router.post("/member", tokenAuth, activityController.post_addMember);
 router.post("/edit", tokenAuth, activityController.post_editActivity);

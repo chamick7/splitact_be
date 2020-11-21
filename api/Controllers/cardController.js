@@ -35,7 +35,6 @@ exports.post_createCard = (req, res, next) => {
             select: "-password -__v -reg_date",
           });
 
-          console.log(cardReturn);
 
           return await res.status(201).json({
             status: "Success",
@@ -153,12 +152,45 @@ exports.get_cardCalendar = (req, res, next) => {
       return res.status(200).json({
         status: "Success",
         cards: result,
-      })
+      });
     })
     .catch((err) => {
       return res.status(400).json({
         status: "Error",
-        code: ""
-      })
+        code: "",
+      });
+    });
+};
+
+//cardId
+exports.delete_card = (req, res, next) => {
+  const cardId = req.body.cardId;
+
+  Card.findOneAndDelete({ _id: cardId })
+    .then((result) => {
+      List.findOneAndUpdate(
+        { _id: result.listId },
+        { $pull: { cards: { cardId } } },
+        { safe: true }
+      )
+        .then((listResult) => {
+          return res.status(200).json({
+            status: "Success",
+            cardId: result._id,
+            listId: result.listId,
+          });
+        })
+        .catch((err) => {
+          return res.status(400).json({
+            status: "Error",
+            code: "AT0044",
+          });
+        });
+    })
+    .catch((err) => {
+      return res.status(400).json({
+        status: "Error",
+        code: "AT0044",
+      });
     });
 };

@@ -5,10 +5,10 @@ const tokenAuth = require("../Middlewares/tokenAuth");
 const tokenGet = require("../Middlewares/tokenGet");
 
 router.post("/",tokenAuth,cardController.post_createCard);
+router.post("/del",tokenAuth,cardController.delete_card);
 router.post("/edit",tokenAuth, cardController.post_editCard);
 router.post("/move",tokenAuth,cardController.post_moveCard);
 router.post("/changelist", tokenAuth, cardController.post_changeListCard);
 router.get("/calendar",tokenAuth,cardController.get_cardCalendar);
-
 
 module.exports = router;

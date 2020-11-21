@@ -3,9 +3,34 @@ const Activity = require("../../DB/models/activityModel");
 const Member = require("../../DB/models/memberModel");
 const List = require("../../DB/models/listModel");
 const Card = require("../../DB/models/cardModel");
+const HotAct = require("../../DB/models/hotactModel");
 const mongoose = require("mongoose");
 const { update } = require("immutability-helper");
 const { populate } = require("../../DB/models/accountModel");
+
+const deleteActivity = async (activityId) => {
+  await List.find({ activityId: activityId })
+    .then((result) => {
+      result.map((list) => {
+        Card.deleteMany({ listId: list._id })
+          .then((cardResult) => {
+            List.deleteOne({ _id: list._id })
+              .then((listResult) => {
+                status = true;
+              })
+              .catch((err) => {
+                status = false;
+              });
+          })
+          .catch((err) => {
+            status = false;
+          });
+      });
+    })
+    .catch((err) => {
+      status = false;
+    });
+};
 
 //atName,atCreaterID,member
 exports.post_createActivity = (req, res, next) => {
@@ -195,11 +220,9 @@ exports.get_activity = (req, res, next) => {
             id: member.acId._id,
           }));
 
-
           const sortHotAct = dataRes.atId.hotAct.sort(
             (a, b) => a.dueDate - b.dueDate
           );
-
 
           return res.status(200).json({
             status: "Success",
@@ -239,6 +262,57 @@ exports.get_amountActivity = (req, res, next) => {
       return res.status(500).json({
         status: "Error",
         code: "AT0021",
+      });
+    });
+};
+
+//activityId
+exports.post_leaveActivity = async (req, res, next) => {
+  const acId = req.accountData.acID;
+  const activityId = req.body.activityId;
+
+  Member.findOneAndDelete({ $and: [{ acId: acId }, { atId: activityId }] })
+    .then((result) => {
+      console.log(result);
+      Member.find({ atId: activityId })
+        .then(async (result) => {
+          if (result.length == 0) {
+            deleteActivity(activityId);
+
+            HotAct.deleteMany({ activityId: activityId })
+              .then(() => {
+                Activity.deleteOne({ _id: activityId })
+                  .then((result) => {
+                    return res.status(200).json({
+                      status: "Success",
+                    });
+                  })
+                  .catch((err) => {
+                    return res.status(400).json({
+                      status: "Error",
+                      code: "AT0006",
+                    });
+                  });
+              })
+              .catch((err) => {
+                return res.status(400).json({
+                  status: "Error",
+                  code: "AT0006",
+                });
+              });
+          }
+        })
+        .catch((err) => {
+          return res.status(200).json({
+            status: "Error",
+            code: "AT0005",
+          });
+        });
+    })
+    .catch((err) => {
+      return res.status(200).json({
+        status: "Error",
+        code: "AT0005",
       });
     });
 };
