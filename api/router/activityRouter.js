@@ -1,20 +1,23 @@
 const express = require("express");
 const router = express.Router();
 const activityController = require("../Controllers/activityController");
+const cardRouter = require("./cardRouter");
+const listRouter = require("./listRouter");
+const hotActRouter = require("./hotActRouter");
 const tokenAuth = require("../Middlewares/tokenAuth");
 const tokenGet = require("../Middlewares/tokenGet");
 
-router.post("/",tokenAuth,activityController.post_createActivity);
-router.get("/",tokenAuth,activityController.get_activity);
-router.get("/amount",tokenAuth,activityController.get_amountActivity);
+router.post("/", tokenAuth, activityController.post_createActivity);
+router.get("/", tokenAuth, activityController.get_activity);
+router.get("/amount", tokenAuth, activityController.get_amountActivity);
+router.post("/member", tokenAuth, activityController.post_addMember);
+router.post("/edit", tokenAuth, activityController.post_editActivity);
 
-router.post("/card",tokenAuth,activityController.post_createCard);
-router.post("/editcard",tokenAuth, activityController.post_editCard);
-router.post("/movecard",tokenAuth,activityController.post_moveCard);
-router.post("/changelistcard", tokenAuth, activityController.post_changeListCard);
-
+router.use("/card", cardRouter);
 
 // router.post("/")
-router.post("/editlist",tokenAuth,activityController.post_editList);
+router.use("/list", listRouter);
+
+router.use("/hotact", hotActRouter);
 
 module.exports = router;

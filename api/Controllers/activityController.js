@@ -5,6 +5,7 @@ const List = require("../../DB/models/listModel");
 const Card = require("../../DB/models/cardModel");
 const mongoose = require("mongoose");
 const { update } = require("immutability-helper");
+const { populate } = require("../../DB/models/accountModel");
 
 //atName,atCreaterID,member
 exports.post_createActivity = (req, res, next) => {
@@ -91,6 +92,70 @@ exports.post_createActivity = (req, res, next) => {
     });
 };
 
+//activityId, atName, color, dueDate
+exports.post_editActivity = (req, res, next) => {
+  const activityId = req.body.activityId;
+  const atName = req.body.atName;
+  const color = req.body.color;
+  const dueDate = req.body.dueDate;
+
+  Activity.findOneAndUpdate(
+    { _id: activityId },
+    {
+      atName: atName,
+      color: color,
+      dueDate: dueDate,
+    },
+    { new: true }
+  )
+    .then((result) => {
+      return res.status(200).json({
+        status: "Success",
+      });
+    })
+    .catch((err) => {
+      return res.status(400).json({
+        status: "Error",
+        code: "",
+      });
+    });
+};
+
+//activityId, newMembers //fix after img
+exports.post_addMember = (req, res, next) => {
+  const activityId = req.body.activityId;
+  const members = req.body.newMembers;
+
+  const memberList = members.map((member) => ({
+    _id: mongoose.Types.ObjectId(),
+    acId: member.acID,
+    atId: activityId,
+  }));
+
+  Member.insertMany(memberList)
+    .then(async (result) => {
+      const memberList = result.map((member) => ({
+        acId: member.acId,
+      }));
+      const populateMember = await Account.populate(memberList, {
+        path: "acId",
+        select: "_id username",
+      });
+
+      return res.status(200).json({
+        status: "Success",
+        members: populateMember,
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      return res.status(400).json({
+        status: "Error",
+        code: "AT0014",
+      });
+    });
+};
+
 exports.get_activity = (req, res, next) => {
   console.log(req.query.activity);
   Member.findOne({
@@ -109,6 +174,13 @@ exports.get_activity = (req, res, next) => {
         },
       },
     })
+    .populate({
+      path: "atId",
+      populate: {
+        path: "hotAct",
+        select: "-__v",
+      },
+    })
     .select("-_id -__v -crDate")
     .then((dataRes) => {
       Member.find({ atId: req.query.activity })
@@ -123,10 +195,17 @@ exports.get_activity = (req, res, next) => {
             id: member.acId._id,
           }));
 
+
+          const sortHotAct = dataRes.atId.hotAct.sort(
+            (a, b) => a.dueDate - b.dueDate
+          );
+
+
           return res.status(200).json({
             status: "Success",
             activity: dataRes.atId,
             members: members,
+            hotAct: sortHotAct,
           });
         })
         .catch((err) => {
@@ -160,175 +239,6 @@ exports.get_amountActivity = (req, res, next) => {
       return res.status(500).json({
         status: "Error",
         code: "AT0021",
-      });
-    });
-};
-
-//card_name, card_description, dueDate, workerId, listId, color
-exports.post_createCard = (req, res, next) => {
-  const cardSave = Card({
-    _id: mongoose.Types.ObjectId(),
-    cardName: req.body.card_name.trim(),
-    cardDescription: req.body.card_description.trim(),
-    color: req.body.color,
-    listId: req.body.listId,
-    workerId: req.body.workerId || null,
-    createrId: req.accountData.acID,
-    dueDate: req.body.dueDate || null,
-  });
-
-  cardSave
-    .save()
-    .then((result) => {
-      const card = result;
-
-      List.findOneAndUpdate(
-        { _id: result.listId },
-        { $push: { cards: result._id } },
-        { new: true }
-      )
-        .then(async (result) => {
-          const cardReturn = await Account.populate(card, {
-            path: "workerId",
-            select: "-password -__v -reg_date",
-          });
-
-          console.log(cardReturn);
-
-          return await res.status(201).json({
-            status: "Success",
-            card: cardReturn,
-          });
-        })
-        .catch((err) => {
-          return res.status(500).json({
-            status: "Error",
-            code: "AT0032",
-          });
-        });
-    })
-    .catch((err) => {
-      console.log(err);
-      return res.status(400).json({
-        status: "Error",
-        code: "AT0031",
-      });
-    });
-};
-
-//listId, cards
-exports.post_moveCard = (req, res, next) => {
-  const listId = req.body.listId;
-  const cards = req.body.cards;
-
-  List.updateOne({ _id: listId }, { cards: cards })
-    .then((result) => {
-      return res.status(200).json({
-        status: "Success",
-      });
-    })
-    .catch((err) => {
-      return res.status(400).json({
-        status: "Error",
-        code: "AT0041",
-      });
-    });
-};
-
-//cardId, card_name, card_description, color, dueDate, workerId
-exports.post_editCard = (req, res, next) => {
-  const cardId = req.body.cardId;
-  const cardName = req.body.card_name;
-  const cardDescription = req.body.card_description;
-  const color = req.body.color;
-  const dueDate = req.body.dueDate || null;
-  const workerId = req.body.workerId || null;
-
-  Card.findOneAndUpdate(
-    { _id: cardId },
-    {
-      cardName: cardName,
-      cardDescription: cardDescription,
-      color: color,
-      workerId: workerId,
-      dueDate: dueDate,
-    },
-    { new: true }
-  )
-    .then(async (result) => {
-      const resCard = await Card.populate(result, {
-        path: "workerId",
-        select: "-password -__v -reg_date",
-      });
-
-      return res.status(200).json({
-        status: "Success",
-        card: resCard
-      })
-    })
-    .catch((err) => {
-      console.log(err);
-      return res.status(400).json({
-        status: "Error",
-        code: "AT0033",
-      });
-    });
-};
-
-//oldlistId, oldCards, newListId, newCards
-exports.post_changeListCard = (req, res, next) => {
-  const oldListId = req.body.oldListId;
-  const oldCards = req.body.oldCards;
-  const newListId = req.body.newListId;
-  const newCards = req.body.newCards;
-
-  List.update({ _id: oldListId }, { cards: oldCards })
-    .then((result) => {
-      List.update({ _id: newListId }, { cards: newCards })
-        .then((result) => {
-          return res.status(200).json({
-            status: "Success",
-          });
-        })
-        .catch((err) => {
-          return res.status(400).json({
-            status: "Error",
-            code: "AT0042",
-          });
-        });
-    })
-    .catch((err) => {
-      return res.status(400).json({
-        status: "Error",
-        code: "AT0042",
-      });
-    });
-};
-
-//listId, newName
-exports.post_editList = (req, res, next) => {
-  const listId = req.body.listId;
-  const newName = req.body.newName;
-
-  List.findOneAndUpdate({ _id: listId }, { listName: newName }, { new: true })
-    .then(async (result) => {
-      const resList = await List.populate(result, {
-        path: "cards",
-        select: "-__v",
-        populate: {
-          path: "workerId",
-          select: "-password -__v -reg_date",
-        },
-      });
-      return res.status(200).json({
-        status: "Success",
-        list: resList,
-      });
-    })
-    .catch((err) => {
-      return res.status(400).json({
-        status: "Error",
-        code: "AT0055",
       });
     });
 };
