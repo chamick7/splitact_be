@@ -218,6 +218,7 @@ exports.get_activity = (req, res, next) => {
           const members = result.map((member) => ({
             username: member.acId.username,
             id: member.acId._id,
+            img: member.acId.img,
           }));
 
           const sortHotAct = dataRes.atId.hotAct.sort(

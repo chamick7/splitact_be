@@ -5,10 +5,14 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const path = require("path");
 require("dotenv").config();
+
+global.__basedir = __dirname;
 
 const accountRouter = require("./api/router/accountRouter");
 const activityRouter = require("./api/router/activityRouter");
+const fileRouter = require("./api/router/fileRouter");
 
 //connect Mongodb
 mongoose
@@ -63,10 +67,11 @@ app.get("/", (req, res, next) => {
   });
 });
 
+app.use(express.static(__dirname + '/public'));
 //select api
 app.use("/account", accountRouter);
 app.use("/activity", activityRouter);
-
+app.use("/file", fileRouter);
 app.use("/test", (req, res, next) => {
   res.status(200).end();
 });

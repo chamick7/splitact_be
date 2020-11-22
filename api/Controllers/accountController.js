@@ -9,24 +9,28 @@ const mailer = require("../../utils/mailer");
 //email,password,name
 exports.post_register = (req, res, next) => {
   console.log(req.body);
-  Account.find({ $or: [{username: req.body.username.trim()},{email: req.body.email.trim()}] })
+  Account.find({
+    $or: [
+      { username: req.body.username.trim() },
+      { email: req.body.email.trim() },
+    ],
+  })
     .exec()
     .then((accountRes) => {
       if (accountRes.length >= 1) {
-        if(accountRes[0].username === req.body.username.trim()){
+        if (accountRes[0].username === req.body.username.trim()) {
           res.status(409).json({
             status: "Error",
             Code: "AC0001",
-            already: "username"
+            already: "username",
           });
-        } else if(accountRes[0].email === req.body.email.trim()) {
+        } else if (accountRes[0].email === req.body.email.trim()) {
           res.status(409).json({
             status: "Error",
             Code: "AC0001",
-            already: "email"
+            already: "email",
           });
         }
-        
       } else {
         bcrypt
           .hash(req.body.password, 10)
@@ -73,10 +77,16 @@ exports.post_login = (req, res, next) => {
       email: account.email,
       username: account.username,
       role: account.role,
+      img: account.img,
     };
   };
 
-  Account.find({ $or: [{email: req.body.emailOrUsername.trim()},{username: req.body.emailOrUsername.trim()}] })
+  Account.find({
+    $or: [
+      { email: req.body.emailOrUsername.trim() },
+      { username: req.body.emailOrUsername.trim() },
+    ],
+  })
     .exec()
     .then((accountRes) => {
       if (accountRes.length >= 1) {
@@ -150,31 +160,51 @@ exports.get_logout = (req, res, next) => {
   if (req.session) {
     req.session.destroy();
     res.clearCookie();
-    res.redirect('/');
+    res.redirect("/");
   }
 };
 
-exports.get_users = (req, res, next) => {
-  Account.find({ _id: { $ne: req.accountData.acID } }).select("_id username").then(data => {
-    console.log(data);
-    if(data.length >= 1){
-      res.status(200).json({
-        status: "Success",
-        users: data
-      })
-    } else {
-      res.status(404).json({
-        status: "Error",
-        code: "AC0062"
-      })
-    }
+exports.get_account = (req, res, next) => {
+  const acId = req.accountData.acID;
 
-  }).catch(err => {
-    res.status(500).json({
-      status: "Error",
-      code: "AC0061"
+  Account.findOne({ _id: acId })
+    .select("-password -__v -reg_date")
+    .then((account) => {
+      return res.status(200).json({
+        status: "Success",
+        account: account,
+      });
     })
-  })
+    .catch((err) => {
+      return res.status(400).json({
+        status: "Error",
+        code: "AC0013",
+      });
+    });
+};
+
+exports.get_users = (req, res, next) => {
+  Account.find({ _id: { $ne: req.accountData.acID } })
+    .select("_id username img")
+    .then((data) => {
+      if (data.length >= 1) {
+        res.status(200).json({
+          status: "Success",
+          users: data,
+        });
+      } else {
+        res.status(404).json({
+          status: "Error",
+          code: "AC0062",
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "Error",
+        code: "AC0061",
+      });
+    });
 };
 
 //email
@@ -188,10 +218,10 @@ exports.post_forgetPW_sendToken = (req, res, next) => {
           { expiresIn: "10m" },
           (err, token) => {
             // console.log(mailer.sendMail(accountRes[0].email, token ));
-            mailer.sendMail(accountRes[0].email,accountRes[0].username, token);
+            mailer.sendMail(accountRes[0].email, accountRes[0].username, token);
             return res.status(200).json({
-              status: "Success"
-            })
+              status: "Success",
+            });
 
             // return res.status(200).json({
             //   status: "Success",
@@ -221,7 +251,7 @@ exports.get_forgetPW_recieveToken = (req, res, next) => {
 
     res.status(200).json({
       status: "Success",
-      email: decode.email
+      email: decode.email,
     });
   } catch (error) {
     res.status(406).json({
@@ -256,4 +286,55 @@ exports.post_forgetPW_resetPassword = (req, res, next) => {
       code: "AC0041",
     });
   }
+};
+
+//old_password, new_password
+exports.post_changePassword = (req, res, next) => {
+  const acId = req.accountData.acID;
+  const oldPassword = req.body.old_password;
+  const newPassword = req.body.new_password;
+
+  Account.findOne({ _id: acId })
+    .then((account) => {
+      bcrypt.compare(oldPassword, account.password, (err, result) => {
+        if (result) {
+          bcrypt
+            .hash(newPassword, 10)
+            .then((hash) => {
+              Account.updateOne({ _id: acId }, { password: hash })
+                .then((updateResult) => {
+                  req.session.destroy();
+                  res.clearCookie();
+                  res.redirect("/");
+                  return res.status(200).json({
+                    status: "Success",
+                  });
+                })
+                .catch((err) => {
+                  return res.status(400).json({
+                    status: "Error",
+                    code: "AC0003",
+                  });
+                });
+            })
+            .catch((err) => {
+              return res.status(500).json({
+                status: "Error",
+                code: "AC0002",
+              });
+            });
+        } else {
+          return res.status(400).json({
+            status: "Error",
+            code: "AC0004",
+          });
+        }
+      });
+    })
+    .catch((err) => {
+      return res.status(404).json({
+        status: "Error",
+        code: "AC0012",
+      });
+    });
 };
