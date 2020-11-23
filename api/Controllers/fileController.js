@@ -14,7 +14,7 @@ const imgStorage = multer.diskStorage({
 const uploadImg = multer({ storage: imgStorage }).single("file");
 
 exports.post_uploadFile = (req, res, next) => {
-  const path = "http://localhost:5000/file/";
+  const path = "https://api.splitact.com/file/";
   const cardId = req.body.cardId;
 
   let fileSave = req.files.map((file) => path + file.originalname);
