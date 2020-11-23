@@ -252,7 +252,12 @@ exports.get_activity = (req, res, next) => {
 exports.get_amountActivity = (req, res, next) => {
   Member.find({ acId: req.accountData.acID })
     .select("-_id")
-    .populate("atId")
+    .populate({
+      path: "atId",
+      populate: {
+        path: "list",
+      },
+    })
     .then((doc) => {
       return res.status(200).json({
         status: "Success",

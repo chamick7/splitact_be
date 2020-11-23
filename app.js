@@ -33,7 +33,7 @@ mongoose
 
 app.use(morgan("dev"));
 app.use(cookieParser());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(
   session({
@@ -67,7 +67,7 @@ app.get("/", (req, res, next) => {
   });
 });
 
-app.use(express.static(__dirname + '/public'));
+app.use(express.static(__dirname + "/public"));
 //select api
 app.use("/account", accountRouter);
 app.use("/activity", activityRouter);
