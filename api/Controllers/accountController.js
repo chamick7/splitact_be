@@ -5,10 +5,24 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const moment = require("../../utils/moment");
 const mailer = require("../../utils/mailer");
+const { OAuth2Client } = require("google-auth-library");
+
+const client = new OAuth2Client(
+  "107918386554-4tk9ogji5gvo12hsv8eu5omcid06vi3n.apps.googleusercontent.com"
+);
+
+const getAccountData = (account) => {
+  return {
+    acID: account._id,
+    email: account.email,
+    username: account.username,
+    role: account.role,
+    img: account.img,
+  };
+};
 
 //email,password,name
 exports.post_register = (req, res, next) => {
-  console.log(req.body);
   Account.find({
     $or: [
       { username: req.body.username.trim() },
@@ -71,16 +85,6 @@ exports.post_register = (req, res, next) => {
 
 //email,password
 exports.post_login = (req, res, next) => {
-  const getAccountData = (account) => {
-    return {
-      acID: account._id,
-      email: account.email,
-      username: account.username,
-      role: account.role,
-      img: account.img,
-    };
-  };
-
   Account.find({
     $or: [
       { email: req.body.emailOrUsername.trim() },
@@ -138,6 +142,131 @@ exports.post_login = (req, res, next) => {
       return res.status(500).json({
         status: "Error",
         code: "AC0013",
+      });
+    });
+};
+
+//tokenId
+exports.post_googleAuth = (req, res, next) => {
+  const { tokenId } = req.body;
+
+  client
+    .verifyIdToken({
+      idToken: tokenId,
+      audience:
+        "107918386554-4tk9ogji5gvo12hsv8eu5omcid06vi3n.apps.googleusercontent.com",
+    })
+    .then((result) => {
+      const payload = result.payload;
+      if (payload.email_verified) {
+        Account.find({ email: payload.email })
+          .then((doc) => {
+            if (doc.length >= 1) {
+              const account = doc[0];
+
+              jwt.sign(
+                getAccountData(account),
+                process.env.JWT_SECRET,
+                {
+                  expiresIn: "12h",
+                },
+                (err, token) => {
+                  req.session.user = getAccountData(account);
+                  req.session.cookie.maxAge = 12 * 60 * 60 * 1000;
+
+                  res.cookie("token", token, {
+                    maxAge: 12 * 60 * 60 * 1000,
+                    httpOnly: true,
+                  });
+
+                  return res
+                    .status(200)
+                    .json({
+                      status: "Success",
+                      account: getAccountData(account),
+                    })
+                    .end();
+                }
+              );
+            } else {
+              bcrypt
+                .hash(payload.email + process.env.JWT_SECRET, 10)
+                .then((hash) => {
+                  const newAccount = Account({
+                    _id: mongoose.Types.ObjectId(),
+                    username: payload.name,
+                    email: payload.email,
+                    img: payload.picture,
+                    password: hash,
+                  });
+
+                  newAccount
+                    .save()
+                    .then((result) => {
+                      jwt
+                        .sign(
+                          getAccountData(result),
+                          process.env.JWT_SECRET,
+                          {
+                            expiresIn: "12h",
+                          },
+                          (err, token) => {
+                            req.session.user = getAccountData(result);
+                            req.session.cookie.maxAge = 12 * 60 * 60 * 1000;
+
+                            res.cookie("token", token, {
+                              maxAge: 12 * 60 * 60 * 1000,
+                              httpOnly: true,
+                            });
+
+                            return res
+                              .status(200)
+                              .json({
+                                status: "Success",
+                                account: getAccountData(result),
+                              })
+                              .end();
+                          }
+                        )
+                        .catch((err) => {
+                          return res.status(400).json({
+                            status: "Error",
+                            code: "AC0006",
+                          });
+                        });
+                    })
+                    .catch((err) => {
+                      return res.status(400).json({
+                        status: "Error",
+                        code: "AC0006",
+                      });
+                    });
+                })
+                .catch((err) => {
+                  return res.status(400).json({
+                    status: "Error",
+                    code: "AC0006",
+                  });
+                });
+            }
+          })
+          .catch((err) => {
+            return res.status(400).json({
+              status: "Error",
+              code: "AC0006",
+            });
+          });
+      } else {
+        return res.status(400).json({
+          status: "Error",
+          code: "AC0006",
+        });
+      }
+    })
+    .catch((err) => {
+      return res.status(400).json({
+        status: "Error",
+        code: "AC0006",
       });
     });
 };

@@ -13,6 +13,7 @@ global.__basedir = __dirname;
 const accountRouter = require("./api/router/accountRouter");
 const activityRouter = require("./api/router/activityRouter");
 const fileRouter = require("./api/router/fileRouter");
+const contactRouter = require("./api/router/contactRouter");
 
 //connect Mongodb
 mongoose
@@ -31,7 +32,7 @@ mongoose
     console.log(err);
   });
 
-app.use(morgan("dev"));
+// app.use(morgan("dev"));
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -72,6 +73,7 @@ app.use(express.static(__dirname + "/public"));
 app.use("/account", accountRouter);
 app.use("/activity", activityRouter);
 app.use("/file", fileRouter);
+app.use("/contact", contactRouter);
 app.use("/test", (req, res, next) => {
   res.status(200).end();
 });
