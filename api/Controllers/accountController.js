@@ -153,8 +153,7 @@ exports.post_googleAuth = (req, res, next) => {
   client
     .verifyIdToken({
       idToken: tokenId,
-      audience:
-        "107918386554-4tk9ogji5gvo12hsv8eu5omcid06vi3n.apps.googleusercontent.com",
+      audience: process.env.GOOGLE_CLIENT,
     })
     .then((result) => {
       const payload = result.payload;
@@ -203,39 +202,33 @@ exports.post_googleAuth = (req, res, next) => {
                   newAccount
                     .save()
                     .then((result) => {
-                      jwt
-                        .sign(
-                          getAccountData(result),
-                          process.env.JWT_SECRET,
-                          {
-                            expiresIn: "12h",
-                          },
-                          (err, token) => {
-                            req.session.user = getAccountData(result);
-                            req.session.cookie.maxAge = 12 * 60 * 60 * 1000;
+                      jwt.sign(
+                        getAccountData(result),
+                        process.env.JWT_SECRET,
+                        {
+                          expiresIn: "12h",
+                        },
+                        (err, token) => {
+                          req.session.user = getAccountData(result);
+                          req.session.cookie.maxAge = 12 * 60 * 60 * 1000;
 
-                            res.cookie("token", token, {
-                              maxAge: 12 * 60 * 60 * 1000,
-                              httpOnly: true,
-                            });
-
-                            return res
-                              .status(200)
-                              .json({
-                                status: "Success",
-                                account: getAccountData(result),
-                              })
-                              .end();
-                          }
-                        )
-                        .catch((err) => {
-                          return res.status(400).json({
-                            status: "Error",
-                            code: "AC0006",
+                          res.cookie("token", token, {
+                            maxAge: 12 * 60 * 60 * 1000,
+                            httpOnly: true,
                           });
-                        });
+
+                          return res
+                            .status(200)
+                            .json({
+                              status: "Success",
+                              account: getAccountData(result),
+                            })
+                            .end();
+                        }
+                      );
                     })
                     .catch((err) => {
+                      console.log(err);
                       return res.status(400).json({
                         status: "Error",
                         code: "AC0006",
