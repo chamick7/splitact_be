@@ -265,8 +265,9 @@ exports.get_forgetPW_recieveToken = (req, res, next) => {
 exports.post_forgetPW_resetPassword = (req, res, next) => {
   try {
     const decode = jwt.verify(req.body.rsToken, process.env.JWT_SECRET);
-
-    bcrypt.hash(req.body.password, 10).then((hash) => {
+    console.log(req.body);
+    bcrypt.hash(req.body.newPassword, 10).then((hash) => {
+      console.log(hash);
       Account.findOneAndUpdate({ email: decode.email }, { password: hash })
         .then(() => {
           return res.status(200).json({

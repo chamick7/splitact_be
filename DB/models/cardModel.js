@@ -6,6 +6,7 @@ const cardSchema = mongoose.Schema({
   cardDescription: { type: String },
   color: { type: String, required: true },
   listId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "List" },
+  atId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Activity" },
   files: [String],
   workerId: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
   createrId: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },

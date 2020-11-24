@@ -8,12 +8,14 @@ const { update } = require("immutability-helper");
 
 //card_name, card_description, dueDate, workerId, listId, color
 exports.post_createCard = (req, res, next) => {
+  console.log(req.body);
   const cardSave = Card({
     _id: mongoose.Types.ObjectId(),
     cardName: req.body.card_name.trim(),
     cardDescription: req.body.card_description.trim(),
     color: req.body.color,
     listId: req.body.listId,
+    atId: req.body.activityId,
     workerId: req.body.workerId || null,
     createrId: req.accountData.acID,
     dueDate: req.body.dueDate || null,
@@ -34,7 +36,6 @@ exports.post_createCard = (req, res, next) => {
             path: "workerId",
             select: "-password -__v -reg_date",
           });
-
 
           return await res.status(201).json({
             status: "Success",
@@ -122,14 +123,24 @@ exports.post_changeListCard = (req, res, next) => {
   const oldCards = req.body.oldCards;
   const newListId = req.body.newListId;
   const newCards = req.body.newCards;
+  const card = req.body.card;
 
   List.update({ _id: oldListId }, { cards: oldCards })
     .then((result) => {
       List.update({ _id: newListId }, { cards: newCards })
         .then((result) => {
-          return res.status(200).json({
-            status: "Success",
-          });
+          Card.update({ _id: card._id }, { listId: newListId })
+            .then((result) => {
+              return res.status(200).json({
+                status: "Success",
+              });
+            })
+            .catch((err) => {
+              return res.status(400).json({
+                status: "Error",
+                code: "AT0042",
+              });
+            });
         })
         .catch((err) => {
           return res.status(400).json({

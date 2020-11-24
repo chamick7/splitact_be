@@ -14,7 +14,7 @@ router.get('/logout',accountController.get_logout);
 router.get('/users',tokenAuth,accountController.get_users);
 router.post('/forgotpw',accountController.post_forgetPW_sendToken);
 router.get('/checktoken',accountController.get_forgetPW_recieveToken);
-router.get('/resetpassword',accountController.post_forgetPW_resetPassword);
+router.post('/resetpassword',accountController.post_forgetPW_resetPassword);
 
 
 
